@@ -1,0 +1,107 @@
+name: Daily scan
+
+on:
+  schedule:
+    # 21:45 UTC on weekdays = 5:45 pm New York in summer, 4:45 pm in winter — after the 4 pm close.
+    # Market holidays are detected automatically (no new SPY bar) and the run exits without publishing.
+    - cron: "45 21 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even if today was not a trading day"
+        type: boolean
+        default: false
+      refresh_universe:
+        description: "Rebuild the SIC-filtered universe now (slow: ~15 min)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # commit the recommendation log + daily report archive
+  issues: write     # open an issue when alerts fire
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    outputs:
+      published: ${{ steps.check.outputs.published }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit tests (offline)
+        run: python -m unittest discover -s tests -t .
+
+      - name: Restore SEC download cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: sec-cache-${{ github.run_id }}
+          restore-keys: sec-cache-
+
+      - name: Rebuild universe
+        if: ${{ inputs.refresh_universe }}
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python -m scanner universe
+
+      - name: Run scanner
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m scanner run --site _site ${{ inputs.force && '--force' || '' }}
+
+      - name: Check whether a report was produced
+        id: check
+        run: |
+          if [ -f _site/data/latest.json ]; then echo "published=true" >> "$GITHUB_OUTPUT"; else echo "published=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Commit recommendation log and report archive
+        if: steps.check.outputs.published == 'true'
+        run: |
+          git config user.name "opportunity-scanner[bot]"
+          git config user.email "opportunity-scanner@users.noreply.github.com"
+          git add data/history data/reports data/universe.json
+          if git diff --cached --quiet; then echo "nothing to commit"; else
+            git commit -m "Daily report $(date -u +%Y-%m-%d)" && git push
+          fi
+
+      - name: Open alert issue
+        if: steps.check.outputs.published == 'true' && hashFiles('data/alerts.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s data/alerts.md ] && grep -q "github_issue: true" config/settings.yaml; then
+            gh issue create --title "Scanner alerts $(date -u +%Y-%m-%d)" --body-file data/alerts.md || echo "issue creation failed"
+          fi
+
+      - name: Upload dashboard
+        if: steps.check.outputs.published == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: scan
+    if: needs.scan.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

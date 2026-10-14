@@ -1,0 +1,88 @@
+# AI Opportunity Scanner — configuration
+# Edit these values in GitHub (or locally) to change how the scanner screens, values and scores stocks.
+# Secrets (SEC_USER_AGENT, ANTHROPIC_API_KEY) are NOT stored here — set them as GitHub Actions secrets.
+
+universe:
+  exchanges: ["Nasdaq", "NYSE"]
+  # SEC Standard Industrial Classification codes treated as technology / AI-related.
+  # Ranges are inclusive. Edit to widen or narrow the universe.
+  sic_ranges:
+    - [3559, 3559]   # special industry machinery (semiconductor equipment)
+    - [3570, 3579]   # computers, storage, networking hardware
+    - [3612, 3613]   # transformers, switchgear (data-center power)
+    - [3620, 3629]   # electrical industrial apparatus (power management)
+    - [3660, 3679]   # communications equipment, semiconductors, electronic components
+    - [3820, 3829]   # measuring & test instruments
+    - [3585, 3585]   # HVAC / cooling equipment
+    - [7370, 7379]   # software, cloud, IT services
+  refresh_days: 7          # rebuild the SIC-filtered universe weekly
+  extra_tickers_file: config/universe_extra.csv   # always-include list + theme overrides
+
+screen:                    # initial screen (preferences, not hard rules — see exceptions)
+  min_revenue_ttm: 300000000
+  preferred_revenue_ttm: 1000000000
+  min_revenue_growth: 0.10
+  preferred_revenue_growth: 0.20
+  min_market_cap: 1000000000
+  small_company_exception:   # exceptional smaller companies may qualify, flagged
+    min_revenue_ttm: 100000000
+    min_revenue_growth: 0.40
+  max_fundamentals_age_days: 200   # latest reported period older than this => stale, excluded
+  max_fundamentals_age_days_annual_only: 460  # foreign (20-F) filers tag only annual XBRL; flagged as annual-only
+  shortlist_size: 120              # how many prelim candidates get analyst-estimate lookups
+
+valuation:
+  risk_free_rate: 0.043        # ~10y US Treasury yield; update periodically
+  equity_risk_premium: 0.050
+  credit_spread: 0.020
+  wacc_min: 0.08
+  wacc_max: 0.14
+  beta_min: 0.8
+  beta_max: 2.0
+  terminal_growth: 0.03
+  terminal_ronic: 0.15          # return on new invested capital in perpetuity
+  dcf_years: 10
+  margin_ramp_years: 5
+  margin_ceiling_vs_gross: 0.55 # long-run operating margin ceiling = gross margin x this
+  tax_rate_default: 0.18
+  tax_rate_min: 0.12
+  tax_rate_max: 0.25
+  sales_to_capital_min: 0.8
+  sales_to_capital_max: 5.0
+  max_initial_growth: 0.60
+  scenario_probabilities: {bear: 0.25, base: 0.50, bull: 0.25}
+  ebit_multiple: {intercept: 12.0, per_growth_point: 0.6, min: 8.0, max: 40.0}
+  sales_multiple: {per_rule40_point: 0.20, min: 0.5, max: 20.0}
+  intrinsic_weights: {dcf: 0.5, comps: 0.5}
+  entry_target_return_24m: 0.50  # entry ceiling = price at which prob-weighted 24m return hits this
+
+scoring:
+  weights:
+    valuation: 25
+    growth: 20
+    quality: 15
+    financial_strength: 15
+    upside: 15
+    catalysts: 10
+  caps:                      # a high growth score cannot fully compensate for these
+    weak_balance_sheet: 55
+    extreme_valuation: 60
+  tiers:
+    tier1: {min_score: 75, min_margin_of_safety: 0.15, min_expected_return_24m: 0.50, min_up_down_ratio: 3.0}
+    tier2: {min_score: 62, min_expected_return_24m: 0.25, min_up_down_ratio: 2.0}
+    tier3: {min_score: 50}
+
+report:
+  top_detail_count: 3
+  table_size: 25
+  timezone: America/New_York
+
+alerts:
+  github_issue: true          # open a GitHub issue when alerts fire (GitHub emails you)
+  earnings_within_days: 7
+  watchlist_file: config/watchlist.txt
+
+ai_narrative:                 # optional; requires ANTHROPIC_API_KEY secret (paid API)
+  enabled: false
+  model: claude-haiku-5-5
+  max_companies: 3

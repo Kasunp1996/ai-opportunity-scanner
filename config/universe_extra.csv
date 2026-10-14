@@ -1,0 +1,46 @@
+ticker,segment,note
+TSM,Semiconductors,foreign filer (20-F) - always include
+ASML,Semiconductor Equipment,foreign filer (20-F) - always include
+ARM,Semiconductors,always include
+NVDA,Semiconductors,
+AVGO,Semiconductors,
+AMD,Semiconductors,
+MRVL,Semiconductors,
+CRDO,Networking & Optical,high-speed connectivity
+ALAB,Networking & Optical,high-speed connectivity
+ANET,Networking & Optical,
+CIEN,Networking & Optical,
+COHR,Networking & Optical,
+LITE,Networking & Optical,
+FN,Networking & Optical,
+MU,Semiconductors,memory
+SMCI,Compute & Storage Hardware,
+DELL,Compute & Storage Hardware,
+PSTG,Compute & Storage Hardware,
+NTAP,Compute & Storage Hardware,
+WDC,Compute & Storage Hardware,
+STX,Compute & Storage Hardware,
+VRT,"Power, Cooling & Components",data-center power and cooling
+ETN,"Power, Cooling & Components",data-center power
+MPWR,Semiconductors,power management
+CRWD,Cybersecurity,
+PANW,Cybersecurity,
+ZS,Cybersecurity,
+FTNT,Cybersecurity,
+NET,Cybersecurity,
+S,Cybersecurity,
+OKTA,Cybersecurity,
+CYBR,Cybersecurity,
+QLYS,Cybersecurity,
+TENB,Cybersecurity,
+RPD,Cybersecurity,
+VRNS,Cybersecurity,
+CHKP,Cybersecurity,
+SNOW,Software & Cloud,
+DDOG,Software & Cloud,
+MDB,Software & Cloud,
+NOW,Software & Cloud,
+PLTR,Software & Cloud,
+ORCL,Software & Cloud,
+MSFT,Software & Cloud,
+CRM,Software & Cloud,

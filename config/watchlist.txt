@@ -1,0 +1,4 @@
+# Server-side watchlist: one ticker per line. These get alerts (entry range, earnings soon,
+# thesis changes) in the daily GitHub issue. The dashboard also has a personal, browser-only watchlist.
+NVDA
+CRDO
