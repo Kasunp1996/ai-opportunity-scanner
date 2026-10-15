@@ -205,6 +205,12 @@ def run(source: Source, cfg: Dict[str, Any], site_dir: Path, data_dir: Path, for
         cl = prices[t]["close"]
         m["return_1d"] = cl[-1] / cl[-2] - 1 if len(cl) > 1 and cl[-2] else None
         prelim[t] = m
+        ok, notes, exc = initial_screen(m, cfg)  # re-check with corrected share counts / estimates
+        if not ok:
+            log.info("  %s dropped after full data: %s", t, "; ".join(notes))
+            passed.pop(t, None)
+            continue
+        passed[t] = (notes, exc)
         final[t] = m
         if i and i % 20 == 0:
             log.info("  deep analysis %d/%d", i, len(shortlist))
