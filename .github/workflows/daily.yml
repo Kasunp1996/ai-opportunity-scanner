@@ -5,6 +5,10 @@ on:
     # 21:45 UTC on weekdays = 5:45 pm New York in summer, 4:45 pm in winter — after the 4 pm close.
     # Market holidays are detected automatically (no new SPY bar) and the run exits without publishing.
     - cron: "45 21 * * 1-5"
+  push:
+    # also run whenever the scanner's code or settings change (the bot's daily data commits don't trigger this)
+    branches: [main]
+    paths: ["scanner/**", "site/**", "config/**", ".github/workflows/**", "requirements.txt"]
   workflow_dispatch:
     inputs:
       force:
