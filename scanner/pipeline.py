@@ -55,6 +55,13 @@ class LiveSource(Source):
         return self.sec.fundamentals(cik, subs)
 
 
+def is_trading_day(d: date, cfg: Dict[str, Any]) -> bool:
+    """Weekday that is not an NYSE holiday (list in config/settings.yaml → market_holidays)."""
+    if d.weekday() >= 5:
+        return False
+    return d.isoformat() not in {str(x) for x in cfg.get("market_holidays", [])}
+
+
 def summary_row(m, val, rk, sc, cats, today: date, screen_notes: List[str], exception: bool, deep: bool) -> Dict[str, Any]:
     s = (val or {}).get("scenarios") or {}
     c = s.get("cases", {})
@@ -116,13 +123,20 @@ def run(source: Source, cfg: Dict[str, Any], site_dir: Path, data_dir: Path, for
     site_dir, data_dir = Path(site_dir), Path(data_dir)
     log.info("run started %s (%s)", local.isoformat(), source.label)
 
+    if not force and not is_trading_day(today, cfg):
+        log.info("%s is not a U.S. trading day (weekend or NYSE holiday). Nothing to do.", asof)
+        return {"skipped": True, "reason": f"{asof} is not a trading day"}
     bench = source.market.prices(BENCHMARKS, period="5y")
     spy = bench.get("SPY")
     if not spy:
-        raise RuntimeError("Benchmark prices unavailable — aborting rather than publishing stale data.")
-    if spy["dates"][-1] != asof and not force:
-        log.info("No U.S. trading session today (latest SPY bar %s). Nothing to do.", spy["dates"][-1])
-        return {"skipped": True, "reason": f"market closed (last session {spy['dates'][-1]})"}
+        raise RuntimeError("Benchmark prices unavailable from the market-data provider — aborting rather than publishing stale data.")
+    last_bar = spy["dates"][-1]
+    log.info("latest SPY bar from provider: %s (session date %s)", last_bar, asof)
+    lag = days_between(last_bar, asof)
+    if lag is not None and lag > 5:
+        raise RuntimeError(f"Market data looks stale: latest SPY bar is {last_bar}. Aborting rather than publishing old prices.")
+    if last_bar != asof:
+        log.warning("Provider has not published %s's close yet; prices are as of %s and the report says so.", asof, last_bar)
 
     companies = source.universe(cfg, data_dir, force=False)
     log.info("universe: %d companies", len(companies))
