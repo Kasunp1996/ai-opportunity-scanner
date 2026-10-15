@@ -65,8 +65,9 @@ def growth_path(g1: float, g_term: float, years: int) -> List[float]:
     """Exponential fade of excess growth: high growth rarely persists, so it decays fastest early on;
     the final year lands on terminal growth."""
     path = [g_term + (g1 - g_term) * GROWTH_DECAY ** t for t in range(years)]
-    if years > 1:
-        path[-1] = g_term + (path[-1] - g_term) * 0.5
+    if years > 2:
+        path[-2] = g_term + (path[-2] - g_term) * 0.5
+        path[-1] = g_term  # the terminal value assumes stable growth from here on
     return path
 
 
