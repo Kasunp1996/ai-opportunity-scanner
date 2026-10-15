@@ -58,11 +58,16 @@ def scenario_growth(g1: float, scen: str) -> float:
     return g1
 
 
+GROWTH_DECAY = 0.75  # excess growth over terminal shrinks 25% a year (60% -> 45% -> 34% -> 26% ...)
+
+
 def growth_path(g1: float, g_term: float, years: int) -> List[float]:
-    if years <= 1:
-        return [g1]
-    step = (g1 - g_term) / (years - 1)
-    return [g1 - step * t for t in range(years)]
+    """Exponential fade of excess growth: high growth rarely persists, so it decays fastest early on;
+    the final year lands on terminal growth."""
+    path = [g_term + (g1 - g_term) * GROWTH_DECAY ** t for t in range(years)]
+    if years > 1:
+        path[-1] = g_term + (path[-1] - g_term) * 0.5
+    return path
 
 
 def margin_targets(m: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, Any]:
@@ -80,7 +85,12 @@ def margin_targets(m: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, Any]:
         bull = cur
     bear = min(cur, base) - 0.05
     cyclical = bool(m.get("cyclical_signal"))
-    trough = m.get("op_margin_min_5y")
+    trough, avg = m.get("op_margin_min_5y"), m.get("op_margin_mean_5y")
+    if cyclical and is_num(avg) and cur > avg:
+        # cyclical at an above-average margin: base case reverts halfway to the through-cycle average,
+        # bull holds today's margin, and today's peak is never treated as the norm
+        base = min(base, (cur + avg) / 2)
+        bull = min(bull, cur)
     if cyclical and is_num(trough):
         bear = min(bear, trough)  # cyclical businesses: bear case revisits the worst margin of the last 5 years
     return {"current": cur, "ceiling": ceiling, "bear": bear, "base": base, "bull": bull,

@@ -269,6 +269,7 @@ def compute(company: Dict[str, Any], fund: Dict[str, Any], px: Dict[str, List], 
     hist_m = [safe_div(r["operating_income"], r["revenue"]) for r in m["annual_financials"][-5:]
               if is_num(r["operating_income"]) and is_num(r["revenue"]) and r["revenue"] > 0]
     m["op_margin_min_5y"] = min(hist_m) if hist_m else None
+    m["op_margin_mean_5y"] = sum(hist_m) / len(hist_m) if len(hist_m) >= 3 else None
     yoy12 = [q["yoy"] for q in qhist[-12:] if is_num(q["yoy"])]
     m["growth_range_12q"] = (max(yoy12) - min(yoy12)) if len(yoy12) >= 6 else None
     m["op_margin_range_5y"] = (max(hist_m) - min(hist_m)) if len(hist_m) >= 3 else None

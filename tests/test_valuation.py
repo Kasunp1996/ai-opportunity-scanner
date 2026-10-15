@@ -88,6 +88,17 @@ class ScenarioTests(unittest.TestCase):
         p2 = valuation.path_to_double(m, CFG, sc)
         self.assertTrue(p2["potential_double"])
 
+    def test_cycle_peak_is_not_projected_as_permanent(self):
+        """Memory-style peak: 250% growth, 55% margin vs a 10% through-cycle average."""
+        m = base_metrics(cyclical_signal=True, operating_margin=0.55, gross_margin=0.70, op_margin_mean_5y=0.10,
+                         op_margin_min_5y=-0.10, consensus_growth_ntm=0.60, revenue_growth_ttm=2.5)
+        mt = valuation.margin_targets(m, CFG)
+        self.assertLessEqual(mt["base"], 0.325)
+        self.assertEqual(mt["bear"], -0.10)
+        path = valuation.growth_path(0.60, 0.03, 10)
+        self.assertLess(path[3], 0.30)  # excess growth decays quickly
+        self.assertAlmostEqual(path[-1], 0.03, delta=0.02)
+
     def test_cyclical_bear_revisits_trough_margin(self):
         m = base_metrics(cyclical_signal=True, op_margin_min_5y=-0.05)
         mt = valuation.margin_targets(m, CFG)

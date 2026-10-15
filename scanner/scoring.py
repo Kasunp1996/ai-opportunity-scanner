@@ -128,7 +128,7 @@ def score(m: Dict[str, Any], val: Dict[str, Any], risk: Dict[str, Any], cats: Li
     if flags.get("weak_balance_sheet", {}).get("severity") == "high" and total > capcfg["weak_balance_sheet"]:
         total = capcfg["weak_balance_sheet"]
         caps.append(f"capped at {capcfg['weak_balance_sheet']} (weak balance sheet)")
-    for f in ("excessive_valuation", "optimistic_assumptions_only"):
+    for f in ("excessive_valuation", "optimistic_assumptions_only", "implausible_model_output"):
         if flags.get(f, {}).get("severity") == "high" and total > capcfg["extreme_valuation"]:
             total = capcfg["extreme_valuation"]
             caps.append(f"capped at {capcfg['extreme_valuation']} ({f.replace('_', ' ')})")
@@ -166,7 +166,8 @@ def classify(total: float, m, val, risk, cfg) -> Tuple[str, List[str]]:
         (total >= t2["min_score"], f"score {total:.0f} ≥ {t2['min_score']}"),
         (is_num(er) and er >= t2["min_expected_return_24m"], f"expected 24m return {_pct(er)} ≥ {_pct(t2['min_expected_return_24m'])}"),
         (is_num(ud) and ud >= t2["min_up_down_ratio"], f"upside/downside {_x(ud)} ≥ {t2['min_up_down_ratio']}x"),
-        (not any(f in serious for f in ("weak_balance_sheet", "optimistic_assumptions_only")), "no balance-sheet or optimism red flag"),
+        (not any(f in serious for f in ("weak_balance_sheet", "optimistic_assumptions_only", "implausible_model_output")),
+         "no balance-sheet, optimism or implausible-output red flag"),
     ]
     failed1 = [txt for ok, txt in checks1 if not ok]
     if all(ok for ok, _ in checks2):

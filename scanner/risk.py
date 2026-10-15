@@ -115,6 +115,19 @@ def assess(m: Dict[str, Any], val: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[
         flag("price_up_fundamentals_down", "high", f"stock +{r6:.0%} in 6 months while margins/growth weakened")
 
     sc = (val or {}).get("scenarios")
+    iv = ((val or {}).get("intrinsic") or {}).get("per_share")
+    price = m.get("price")
+    if sc and is_num(price) and price > 0:
+        base24 = sc["cases"]["base"]["return_24m"]
+        bull24 = sc["cases"]["bull"]["return_24m"]
+        if base24 > 2.0 or bull24 > 5.0 or (is_num(iv) and iv / price > 3.0):
+            flag("implausible_model_output", "high",
+                 f"base case {base24:+.0%} / intrinsic {iv / price:.1f}x price — far outside normal ranges; "
+                 "likely a cycle peak or data issue. Verify the inputs before relying on it."
+                 if is_num(iv) else f"base case {base24:+.0%} — far outside normal ranges; verify inputs")
+    if m.get("cyclical_signal"):
+        flag("cyclical_business", "medium", "large swings in growth or margins over the last 5 years; "
+             "valued on through-cycle margins")
     if sc and sc.get("optimistic_only"):
         flag("optimistic_assumptions_only", "high", "attractive return appears only in the bull case")
 
@@ -130,6 +143,7 @@ def assess(m: Dict[str, Any], val: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[
         "acquisition_driven_growth": "Acquisition-dependent growth", "margin_deterioration": "Margin deterioration",
         "price_up_fundamentals_down": "Price outrunning fundamentals",
         "optimistic_assumptions_only": "Thesis needs optimistic assumptions", "data_gaps": "Incomplete data",
+        "implausible_model_output": "Model output outside normal ranges", "cyclical_business": "Cyclicality",
     }
     ordered = sorted(flags.items(), key=lambda kv: 0 if kv[1]["severity"] == "high" else 1)
     top: List[Dict[str, str]] = [{"title": titles.get(k, k), "detail": v["detail"], "severity": v["severity"],
